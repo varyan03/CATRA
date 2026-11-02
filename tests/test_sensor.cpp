@@ -1,4 +1,4 @@
-#include "telemetry_sensor.h"
+#include "../daemon/telemetry_sensor.h"
 #include <iostream>
 #include <unistd.h>
 
