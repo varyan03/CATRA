@@ -54,8 +54,8 @@ ProcessInfo get_process_info(pid_t pid) {
     std::istringstream iss(stat_line.substr(last_paren + 4));
     std::string token;
     
-    // start_time is the 20th token in this remaining substring (field 22 overall)
-    for (int i = 0; i < 19; ++i) {
+    // start_time is the 19th token in this remaining substring (field 22 overall)
+    for (int i = 0; i < 18; ++i) {
         if (!(iss >> token)) {
             return {"", 'X', 0, false};
         }
