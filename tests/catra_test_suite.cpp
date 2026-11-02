@@ -4,7 +4,7 @@
 #include <string_view>
 
 extern "C" {
-#include "header.h"
+#include "../daemon/header.h"
 }
 
 struct TelemetryTestCase {

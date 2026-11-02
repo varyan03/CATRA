@@ -3,7 +3,7 @@
 #include <string_view>
 
 extern "C" {
-#include "header.h"
+#include "../daemon/header.h"
 }
 
 static int infer_telemetry_state(float typing_speed_wpm, float window_switches_per_min) {

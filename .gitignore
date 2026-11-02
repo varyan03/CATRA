@@ -39,10 +39,10 @@ compile_commands.json
 # Treelite Shared Libraries & Binaries
 *.so
 *.dylib
-daemon/catra_test_suite
-daemon/catra_unit_tests
-daemon/realtime_test
-daemon/posix_queue_test
+tests/catra_test_suite
+tests/catra_unit_tests
+tests/realtime_test
+tests/posix_queue_test
 catra_test_suite
 catra_unit_tests
 realtime_test

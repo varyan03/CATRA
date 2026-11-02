@@ -4,7 +4,7 @@
 #include <chrono>
 
 extern "C" {
-#include "main.c"
+#include "../daemon/main.c"
 }
 
 int main() {
