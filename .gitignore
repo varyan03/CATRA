@@ -42,9 +42,11 @@ compile_commands.json
 daemon/catra_test_suite
 daemon/catra_unit_tests
 daemon/realtime_test
+daemon/posix_queue_test
 catra_test_suite
 catra_unit_tests
 realtime_test
+posix_queue_test
 content/
 
 # IDE & System
