@@ -41,8 +41,10 @@ compile_commands.json
 *.dylib
 daemon/catra_test_suite
 daemon/catra_unit_tests
+daemon/realtime_test
 catra_test_suite
 catra_unit_tests
+realtime_test
 content/
 
 # IDE & System
