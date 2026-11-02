@@ -14,16 +14,17 @@ def generate_telemetry_dataset(
 ) -> pd.DataFrame:
     np.random.seed(random_seed)
 
-    # 2-state Markov model: enforces behavioral inertia (typical work vs distraction sessions)
-    p_stay_focus = 0.985
-    p_stay_relax = 0.970
+    # Stationary distribution: pi_focus = (1 - p_stay_relax) / ((1 - p_stay_focus) + (1 - p_stay_relax))
+    # Setting (1 - 0.985) / (0.010 + 0.015) = 0.015 / 0.025 = 0.60 (60% Focus / 40% Relax)
+    p_stay_focus = 0.990
+    p_stay_relax = 0.985
 
     user_states = np.empty(sample_count, dtype=np.int8)
     curr_state = np.random.choice([0, 1])
 
     for idx in range(sample_count):
-        threshold = p_stay_focus if curr_state == 1 else (1.0 - p_stay_relax)
-        if np.random.rand() > threshold:
+        p_stay = p_stay_focus if curr_state == 1 else p_stay_relax
+        if np.random.rand() > p_stay:
             curr_state = 1 - curr_state
         user_states[idx] = curr_state
 
@@ -60,7 +61,7 @@ def generate_telemetry_dataset(
         "timestamp": timestamps,
         "typing_speed_wpm": np.round(typing_wpm, 2),
         "window_switches_per_min": np.round(window_switches, 2),
-        "label": labels
+        "target_state": labels
     })
 
     target_dir = os.path.dirname(os.path.abspath(output_filepath))
@@ -75,7 +76,7 @@ if __name__ == "__main__":
     cli.add_argument("--rows", type=int, default=5000)
     cli.add_argument("--noise", type=float, default=0.05)
     cli.add_argument("--seed", type=int, default=42)
-    cli.add_argument("--out", type=str, default="telemetry_dataset.csv")
+    cli.add_argument("--out", type=str, default="catra_training_dataset.csv")
     args = cli.parse_args()
 
     out_path = args.out if os.path.isabs(args.out) else os.path.join(os.path.dirname(__file__), args.out)
