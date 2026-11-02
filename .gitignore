@@ -44,10 +44,12 @@ tests/catra_unit_tests
 tests/realtime_test
 tests/test_os_scheduler
 daemon/posix_queue_test
+daemon/catra_daemon
 catra_test_suite
 catra_unit_tests
 realtime_test
 test_os_scheduler
+catra_daemon
 posix_queue_test
 content/
 
