@@ -1,0 +1,53 @@
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# ML Datasets, Artifacts & Checkpoints
+*.csv
+*.tsv
+*.model
+*.onnx
+*.pkl
+*.joblib
+*.ubj
+*.bin
+
+# C++ Build Outputs & Compilers
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+Makefile
+*.cmake
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+*.dSYM/
+compile_commands.json
+
+# Treelite Shared Libraries
+*.so
+*.dylib
+
+# IDE & System
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.env
+.env.*
+!.env.example
