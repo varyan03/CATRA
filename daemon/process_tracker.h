@@ -3,5 +3,11 @@
 #include <string>
 #include <sys/types.h>
 
-std::string get_process_name(pid_t pid);
-char get_process_state(pid_t pid);
+struct ProcessInfo {
+    std::string cmdline;
+    char state;
+    unsigned long long start_time;
+    bool is_valid;
+};
+
+ProcessInfo get_process_info(pid_t pid);

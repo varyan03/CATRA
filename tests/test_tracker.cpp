@@ -10,20 +10,39 @@ int main() {
         return 1;
     }
 
-    std::cout << "[*] Monitoring PID " << pid << " (/proc tracking loop active)...\n";
+    ProcessInfo initial_info = get_process_info(pid);
+    if (!initial_info.is_valid) {
+        std::cerr << "[-] Process " << pid << " not found, inaccessible, or has empty cmdline.\n";
+        return 1;
+    }
+
+    const unsigned long long initial_start_time = initial_info.start_time;
+    std::cout << "[*] Monitoring PID " << pid << " (start_time: " << initial_start_time << ")...\n";
 
     while (true) {
-        const std::string name = get_process_name(pid);
-        const char state = get_process_state(pid);
+        const ProcessInfo info = get_process_info(pid);
 
-        std::cout << "[+] PID: " << pid 
-                  << " | Name: " << name 
-                  << " | State: " << state << "\n";
-
-        if (state == 'X') {
-            std::cout << "[!] Process " << pid << " is terminated or unreachable. Stopping tracker.\n";
+        if (!info.is_valid) {
+            std::cout << "[!] Process " << pid << " terminated or inaccessible.\n";
             break;
         }
+        if (info.state == 'X') {
+            std::cout << "[!] Process " << pid << " is Dead ('X').\n";
+            break;
+        }
+        if (info.state == 'Z') {
+            std::cout << "[!] Process " << pid << " entered Zombie state ('Z').\n";
+            break;
+        }
+        if (info.start_time != initial_start_time) {
+            std::cout << "[!] PID " << pid << " reuse detected (start_time mismatch: " 
+                      << initial_start_time << " -> " << info.start_time << ").\n";
+            break;
+        }
+
+        std::cout << "[+] PID: " << pid 
+                  << " | State: " << info.state 
+                  << " | Name: " << info.cmdline << "\n";
 
         sleep(1);
     }
