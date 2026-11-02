@@ -45,6 +45,7 @@ tests/realtime_test
 tests/test_os_scheduler
 tests/test_tracker
 tests/test_sensor
+tests/test_anchor
 daemon/posix_queue_test
 daemon/catra_daemon
 catra_test_suite
@@ -53,6 +54,7 @@ realtime_test
 test_os_scheduler
 test_tracker
 test_sensor
+test_anchor
 catra_daemon
 posix_queue_test
 content/
