@@ -42,8 +42,8 @@ compile_commands.json
 tests/catra_test_suite
 tests/catra_unit_tests
 tests/realtime_test
-tests/posix_queue_test
-catra_test_suite
+daemon/posix_queue_test
+posix_queue_test
 catra_unit_tests
 realtime_test
 posix_queue_test
