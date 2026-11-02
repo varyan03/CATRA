@@ -36,9 +36,14 @@ Makefile
 *.dSYM/
 compile_commands.json
 
-# Treelite Shared Libraries
+# Treelite Shared Libraries & Binaries
 *.so
 *.dylib
+daemon/catra_test_suite
+daemon/catra_unit_tests
+catra_test_suite
+catra_unit_tests
+content/
 
 # IDE & System
 .vscode/
