@@ -1,98 +1,109 @@
+#include "telemetry_sensor.h"
+#include "anchor_engine.h"
+
 #include <iostream>
 #include <iomanip>
-#include <string>
+#include <csignal>
+#include <thread>
 #include <chrono>
-#include <limits>
+#include <deque>
 #include <unistd.h>
 
-#include "scheduler.h"
-
-extern "C" {
-#include "main.c"
+namespace {
+void signal_handler(int sig) {
+    (void)sig;
+    shutdown_requested = 1;
 }
 
-int main() {
-    const pid_t pid = getpid();
+void install_signal_handlers() {
+    struct sigaction sa{};
+    sa.sa_handler = signal_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0; // Explicitly no SA_RESTART
 
-    std::cout << "========================================================\n";
-    std::cout << "  [CATRA] Daemon Initialized. Target PID: " << pid << "\n";
-    std::cout << "  Context-Aware Tiered Resource Allocation Daemon\n";
-    std::cout << "========================================================\n";
+    sigaction(SIGINT, &sa, nullptr);
+    sigaction(SIGTERM, &sa, nullptr);
+}
+} // namespace
 
-    while (true) {
-        std::cout << "\n--------------------------------------------------------\n";
-        std::cout << "[*] Press [Enter] to begin telemetry interval (or 'q' to quit)... ";
-        
-        std::string init_prompt;
-        if (!std::getline(std::cin, init_prompt)) {
-            break;
-        }
-        if (!init_prompt.empty() && (init_prompt[0] == 'q' || init_prompt[0] == 'Q')) {
-            std::cout << "\n[!] Shutting down CATRA daemon. Resetting priority...\n";
-            reset_priority(pid);
-            break;
-        }
+// TODO: Replace with XGBoost inference (features: WPM + window-switch proxy)
+bool predict_focus_state(double wpm) {
+    return wpm >= 20.0;
+}
 
-        std::cout << "[*] Work burst active. Type below and press [Enter] when done:\n> ";
-
-        const auto start_timestamp = std::chrono::steady_clock::now();
-        std::string typed_text;
-        std::getline(std::cin, typed_text);
-        const auto end_timestamp = std::chrono::steady_clock::now();
-
-        const std::chrono::duration<float> elapsed_duration = end_timestamp - start_timestamp;
-        const float elapsed_seconds = elapsed_duration.count();
-
-        // Standard typing speed metric: (characters / 5.0) / (minutes)
-        float calculated_wpm = 0.0f;
-        if (elapsed_seconds > 0.05f && !typed_text.empty()) {
-            calculated_wpm = (static_cast<float>(typed_text.length()) / 5.0f) / (elapsed_seconds / 60.0f);
-        }
-
-        std::cout << "[*] Enter simulated window switches for this interval: ";
-        std::string switches_input;
-        float window_switches = 0.0f;
-        if (std::getline(std::cin, switches_input) && !switches_input.empty()) {
-            try {
-                window_switches = std::stof(switches_input);
-            } catch (...) {
-                window_switches = 0.0f;
-            }
-        }
-
-        // 1. Ingestion: Map features into Treelite union buffer
-        union Entry feature_buffer[2];
-        feature_buffer[0].fvalue = calculated_wpm;
-        feature_buffer[1].fvalue = window_switches;
-
-        // 2. Inference: Evaluate decision tree ensemble
-        float inference_output[1] = {0.0f};
-        predict(feature_buffer, 0, inference_output);
-        const float focus_probability = inference_output[0];
-
-        // 3. Actuation: Reallocate CPU priorities via POSIX scheduler
-        const bool is_focus = (focus_probability >= 0.5f);
-        if (is_focus) {
-            apply_focus_priority(pid);
-        } else {
-            reset_priority(pid);
-        }
-
-        // 4. Kernel Verification: Query actual nice value from the scheduler
-        const int verified_nice = get_process_priority(pid);
-
-        // 5. Live Telemetry & Actuation Dashboard
-        std::cout << "\n================= DAEMON ACTUATION STATUS =================\n";
-        std::cout << std::fixed << std::setprecision(1);
-        std::cout << "  Telemetry Input  : " << calculated_wpm << " WPM | " 
-                  << window_switches << " switches/min (" << elapsed_seconds << "s elapsed)\n";
-        std::cout << std::setprecision(4);
-        std::cout << "  ML Probability   : " << focus_probability << " (" << (focus_probability * 100.0f) << "%)\n";
-        std::cout << "  Predicted State  : " << (is_focus ? "\033[1;32mFocus (Tier 1)\033[0m" : "\033[1;33mRelax (Tier 2)\033[0m") << "\n";
-        std::cout << "  Kernel Nice Value: " << verified_nice 
-                  << (verified_nice < 0 ? " [PROMOTED]" : " [STANDARD]") << "\n";
-        std::cout << "===========================================================\n";
+int main(int argc, char* argv[]) {
+    if (geteuid() != 0) {
+        std::cerr << "Error: CATRA daemon requires root privileges (sudo) to manage process priorities.\n";
+        return 1;
     }
+
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <device_or_fifo_path>\n";
+        return 1;
+    }
+
+    install_signal_handlers();
+
+    const std::string device_path = argv[1];
+
+    KeyboardSensor sensor;
+    if (!sensor.start(device_path)) {
+        std::cerr << "Error: Failed to open telemetry input device: " << device_path << "\n";
+        return 1;
+    }
+
+    AnchorEngine engine;
+
+    constexpr int INTERVAL = 2;
+    constexpr int WINDOW_TICKS = 10;
+    std::deque<int> window;
+
+    while (!shutdown_requested) {
+        for (int i = 0; i < (INTERVAL * 10); ++i) {
+            if (shutdown_requested) {
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+
+        if (shutdown_requested) {
+            break;
+        }
+
+        const int strokes = sensor.get_and_reset_count();
+        window.push_back(strokes);
+        if (window.size() > static_cast<std::size_t>(WINDOW_TICKS)) {
+            window.pop_front();
+        }
+
+        if (!sensor.running()) {
+            std::cout << "[CATRA] Sensor stream closed, retrying..." << std::endl;
+            sensor.stop();
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            sensor.start(device_path);
+        }
+
+        double sum_of_window = 0.0;
+        for (int count : window) {
+            sum_of_window += static_cast<double>(count);
+        }
+
+        const double window_ticks_filled = static_cast<double>(window.size());
+        double wpm = 0.0;
+        if (window_ticks_filled > 0.0) {
+            wpm = (sum_of_window / 5.0) / (window_ticks_filled * static_cast<double>(INTERVAL) / 60.0);
+        }
+
+        const bool is_focused = predict_focus_state(wpm);
+        engine.sweep(is_focused);
+
+        std::cout << "[CATRA] WPM: " << std::fixed << std::setprecision(1) << wpm
+                  << " | State: " << (is_focused ? "FOCUS" : "RELAX") << std::endl;
+    }
+
+    sensor.stop();
+    engine.restore_all();
+    std::cout << "[CATRA] Daemon shutdown complete. Priorities cleanly restored." << std::endl;
 
     return 0;
 }

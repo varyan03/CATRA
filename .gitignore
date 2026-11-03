@@ -59,6 +59,8 @@ test_anchor
 test_anchor_automated
 catra_daemon
 posix_queue_test
+catra
+daemon/catra
 content/
 
 # IDE & System
