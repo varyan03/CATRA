@@ -223,7 +223,7 @@ void AnchorEngine::collect_process_tree(uid_t target_uid, unsigned int pts_major
 
     struct dirent* entry = nullptr;
     while ((entry = readdir(proc_dir)) != nullptr) {
-        if (entry->d_type != DT_DIR || !isdigit(entry->d_name[0])) {
+        if (!isdigit(entry->d_name[0])) {
             continue;
         }
 
@@ -235,7 +235,12 @@ void AnchorEngine::collect_process_tree(uid_t target_uid, unsigned int pts_major
 
         std::string pid_path = std::string("/proc/") + entry->d_name;
         struct stat st{};
-        if (stat(pid_path.c_str(), &st) != 0 || st.st_uid != target_uid) {
+        if (stat(pid_path.c_str(), &st) != 0) {
+            continue;
+        }
+
+        // Allow target user processes and session-spawned root processes (e.g. sudo or setuid)
+        if (target_uid != 0 && st.st_uid != target_uid && st.st_uid != 0) {
             continue;
         }
 
@@ -310,7 +315,7 @@ void AnchorEngine::sweep(bool ml_focus_signal) {
     bool has_active_tty = find_active_tty(target_uid, pts_major, pts_minor);
 
     std::unordered_set<pid_t> in_scope_pids;
-    if (has_active_tty && target_uid != 0) {
+    if (has_active_tty) {
         collect_process_tree(target_uid, pts_major, pts_minor, in_scope_pids);
     }
 
@@ -420,7 +425,9 @@ void AnchorEngine::sweep(bool ml_focus_signal) {
     std::cout << "[AnchorEngine] State: TTY=" << active_pts_path_
               << " | atime_age=" << static_cast<int>(atime_age) << "s (warm=" << (atime_warm ? "yes" : "no")
               << ") | ml_signal=" << (ml_focus_signal ? "FOCUS" : "RELAX")
-              << " => SessionWarm=" << (is_session_warm ? "TRUE" : "FALSE") << "\n";
+              << " => SessionWarm=" << (is_session_warm ? "TRUE" : "FALSE")
+              << " | InScope=" << in_scope_pids.size()
+              << " | Threads=" << threads_.size() << "\n";
 
     bool state_modified = false;
     std::vector<pid_t> to_erase;

@@ -19,6 +19,10 @@
 #include <chrono>
 #include <thread>
 
+#if defined(__linux__) && __has_include(<sys/prctl.h>)
+#include <sys/prctl.h>
+#endif
+
 extern volatile sig_atomic_t shutdown_requested;
 
 namespace {
@@ -70,6 +74,15 @@ int main() {
     std::cout << "  [CATRA] Automated Anchor Engine Integration Test\n";
     std::cout << "========================================================\n\n";
 
+    // Touch the current terminal so find_active_tty explicitly prioritizes this session
+    const char* my_tty = ttyname(STDIN_FILENO);
+    if (my_tty) {
+        struct timeval now_tv[2];
+        gettimeofday(&now_tv[0], nullptr);
+        now_tv[1] = now_tv[0];
+        utimes(my_tty, now_tv);
+    }
+
     pid_t child_pid = fork();
     if (child_pid < 0) {
         std::cerr << "[!] fork() failed: " << std::strerror(errno) << "\n";
@@ -78,22 +91,32 @@ int main() {
 
     if (child_pid == 0) {
         // Drop root privileges to match terminal owner UID if running under sudo
-        const char* sudo_uid_str = std::getenv("SUDO_UID");
-        const char* sudo_gid_str = std::getenv("SUDO_GID");
-        if (sudo_uid_str != nullptr) {
-            gid_t gid = sudo_gid_str ? static_cast<gid_t>(std::stoul(sudo_gid_str)) : static_cast<gid_t>(std::stoul(sudo_uid_str));
-            uid_t uid = static_cast<uid_t>(std::stoul(sudo_uid_str));
-            setgid(gid);
-            setuid(uid);
-        } else if (getuid() == 0) {
-            const char* tty_name = ttyname(STDIN_FILENO);
-            if (tty_name) {
-                struct stat tty_st{};
-                if (stat(tty_name, &tty_st) == 0 && tty_st.st_uid != 0) {
-                    setgid(tty_st.st_gid);
-                    setuid(tty_st.st_uid);
-                }
+        uid_t target_user_uid = 0;
+        gid_t target_user_gid = 0;
+
+        if (my_tty) {
+            struct stat tty_st{};
+            if (stat(my_tty, &tty_st) == 0 && tty_st.st_uid != 0) {
+                target_user_uid = tty_st.st_uid;
+                target_user_gid = tty_st.st_gid;
             }
+        }
+
+        if (target_user_uid == 0) {
+            const char* sudo_uid_str = std::getenv("SUDO_UID");
+            const char* sudo_gid_str = std::getenv("SUDO_GID");
+            if (sudo_uid_str != nullptr) {
+                target_user_uid = static_cast<uid_t>(std::stoul(sudo_uid_str));
+                target_user_gid = sudo_gid_str ? static_cast<gid_t>(std::stoul(sudo_gid_str)) : target_user_uid;
+            }
+        }
+
+        if (target_user_uid != 0 && getuid() == 0) {
+            setgid(target_user_gid);
+            setuid(target_user_uid);
+#if defined(PR_SET_DUMPABLE)
+            prctl(PR_SET_DUMPABLE, 1);
+#endif
         }
 
         cpu_burner_loop();
