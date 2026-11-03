@@ -241,8 +241,7 @@ CATRA/
 │   ├── telemetry_sensor.*      # evdev / FIFO keystroke sensor
 │   ├── anchor_engine.*         # scheduler core
 │   ├── ml_wrapper.*            # C++ ↔ Treelite bridge
-│   ├── main.c, header.h        # generated XGBoost predictor
-│   └── scheduler.*, process_tracker.*, posix_queue_test.cpp   # earlier prototypes
+│   └── main.c, header.h        # generated XGBoost predictor
 ├── ml-pipeline/
 │   ├── generate_dataset.py     # synthetic telemetry generator
 │   ├── check_dataset.py        # dataset QA + plots
