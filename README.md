@@ -31,7 +31,7 @@ An autonomous daemon that combines:
 
 All results below are from an **AWS EC2 instance running Amazon Linux 2023 (2 vCPU)**.
 
-### ⚡ Benchmark: CPU share under contention
+### Benchmark: CPU share under contention
 
 Two CPU-bound processes were pinned to the same core. One ran in the user's terminal (managed by CATRA) and one was background noise (not managed). Script: [`tests/benchmark.sh`](tests/benchmark.sh).
 
@@ -42,7 +42,7 @@ Two CPU-bound processes were pinned to the same core. One ran in the user's term
 
 The measured 75.3% matches the scheduler's (CFS) weight ratio for nice −5 against 0 exactly: `3121 / (3121 + 1024) = 75.3%`.
 
-### ✅ Integration test: 15/15 checks passed
+### Integration test: 15/15 checks passed
 
 Script: [`tests/integration_test.sh`](tests/integration_test.sh).
 
@@ -57,7 +57,7 @@ Script: [`tests/integration_test.sh`](tests/integration_test.sh).
 
 ## Core Features
 
-### 🎹 Headless Keystroke Telemetry
+### Headless Keystroke Telemetry
 
 - Reads `struct input_event` records directly from `/dev/input/event*`, with no X11/Wayland dependency
 - Counts key presses only; key releases and auto-repeat are ignored
@@ -65,21 +65,21 @@ Script: [`tests/integration_test.sh`](tests/integration_test.sh).
 - Also accepts a named FIFO, so testing works on headless servers (EC2, WSL)
 - Reconnects automatically when the device or stream goes away
 
-### 🧠 Compiled ML Inference
+### Compiled ML Inference
 
 - XGBoost model: 100 trees, max depth 3, trained on `typing_speed_wpm` and `window_switches_per_min`
 - Exported to dependency-free C with **Treelite / TL2cgen** and linked straight into the daemon
 - Inference is a few hundred branch comparisons, taking microseconds per tick
 - The C++ wrapper (`ml_wrapper.cpp`) keeps the C-linkage details out of the rest of the code and protects against out-of-range inputs
 
-### 🎯 Session-Scoped Targeting (Anchor Engine)
+### Session-Scoped Targeting (Anchor Engine)
 
 - Identifies the user's active terminal as the `/dev/pts/*` with the newest access time
 - Builds a parent/child process tree from `/proc/*/stat` and collects every process attached to that terminal, plus all their descendants (this catches background jobs like `make &`)
 - Excludes shells, multiplexers and session leaders (`bash`, `zsh`, `tmux`, `sshd`, …)
 - Measures CPU per **thread** from `/proc/[pid]/task/[tid]/stat`, not per process
 
-### ⚖️ Two-Way Hysteresis
+### Two-Way Hysteresis
 
 | Transition | Condition | Ticks required |
 |---|---|---|
@@ -88,7 +88,7 @@ Script: [`tests/integration_test.sh`](tests/integration_test.sh).
 
 A session counts as **warm** if the terminal was used in the last 30s **or** the ML model reports Focus.
 
-### 🛡️ Safety & Correctness
+### Safety & Correctness
 
 - **PID-reuse protection**: before every priority change, CATRA checks the thread's `starttime` to make sure it is still the same thread
 - **Inherited-boost detection**: a new thread that inherited −5 from a boosted parent gets the parent's *original* priority recorded as its baseline, not −5
@@ -286,4 +286,4 @@ For questions or support, please [open an issue](https://github.com/varyan03/CAT
 
 ---
 
-**Built with ❤️ for developers who'd rather wait less on their builds**
+**Built for developers who'd rather wait less on their builds**
