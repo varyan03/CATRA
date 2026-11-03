@@ -114,7 +114,7 @@ DetailedStat parse_stat_line(const std::string& filepath) {
 AnchorEngine::AnchorEngine() {
     long sc_clk = sysconf(_SC_CLK_TCK);
     clock_ticks_per_sec_ = (sc_clk > 0) ? sc_clk : 100;
-    last_sweep_time_ = std::chrono::steady_clock::now();
+    last_sweep_time_ = std::chrono::steady_clock::time_point{};
 
     determine_state_paths();
     check_autogroup();
@@ -288,9 +288,12 @@ void AnchorEngine::collect_process_tree(uid_t target_uid, unsigned int pts_major
 
 void AnchorEngine::sweep(bool ml_focus_signal) {
     const auto now = std::chrono::steady_clock::now();
-    const double elapsed_secs = std::chrono::duration<double>(now - last_sweep_time_).count();
+    const bool is_first_sweep = (last_sweep_time_ == std::chrono::steady_clock::time_point{});
+    const double elapsed_secs = is_first_sweep
+        ? 1.0
+        : std::chrono::duration<double>(now - last_sweep_time_).count();
 
-    if (elapsed_secs < 0.05) {
+    if (!is_first_sweep && elapsed_secs < 0.05) {
         return;
     }
 

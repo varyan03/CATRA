@@ -56,7 +56,7 @@ public:
 
 private:
     long clock_ticks_per_sec_{100};
-    std::chrono::steady_clock::time_point last_sweep_time_{std::chrono::steady_clock::now()};
+    std::chrono::steady_clock::time_point last_sweep_time_{};
     std::string state_dir_{"/run/catra"};
     std::string state_file_path_{"/run/catra/state.dat"};
 
