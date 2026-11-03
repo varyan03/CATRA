@@ -1,0 +1,54 @@
+[Unit]
+Description=CATRA - Context-Aware Tiered Resource Allocation daemon
+# CATRA needs no network; it needs local filesystems (/proc, /dev, /tmp) to be ready.
+After=local-fs.target systemd-udevd.service
+# Allow systemd's restart loop to keep trying while the input source is missing.
+StartLimitIntervalSec=60
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+# --- Input source -------------------------------------------------------------
+# EC2/WSL test mode: ensure the mock FIFO exists before the daemon opens it.
+# Mode 0622: anyone may write simulated keystrokes (mock_keyboard.py), only root may read.
+ExecStartPre=/bin/sh -c '[ -p /tmp/fake_keyboard ] || mkfifo -m 0622 /tmp/fake_keyboard'
+ExecStart=/usr/local/bin/catra /tmp/fake_keyboard
+# Real hardware: drop ExecStartPre and point at a stable evdev path, e.g.
+# ExecStart=/usr/local/bin/catra /dev/input/by-path/platform-i8042-serio-0-event-kbd
+
+# --- Lifecycle ----------------------------------------------------------------
+Restart=on-failure
+RestartSec=5
+# SIGTERM -> daemon calls restore_all(); give it time before SIGKILL.
+KillSignal=SIGTERM
+TimeoutStopSec=10
+
+# --- Crash-recovery state -----------------------------------------------------
+# systemd creates /run/catra (tmpfs, 0700) before start.
+RuntimeDirectory=catra
+RuntimeDirectoryMode=0700
+# CRITICAL: by default systemd deletes the RuntimeDirectory on *every* stop,
+# including automatic restarts after a crash. That would destroy state.dat
+# exactly when recover_state() needs it. Preserve it across restarts.
+RuntimeDirectoryPreserve=restart
+
+# --- Hardening (compatible with /proc scanning + setpriority) -----------------
+# /tmp must be the real /tmp so the shared FIFO is visible: no PrivateTmp.
+PrivateTmp=no
+NoNewPrivileges=yes
+ProtectSystem=full
+ProtectHome=read-only
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+LockPersonality=yes
+
+# Logs go to the journal: journalctl -u catra -f
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

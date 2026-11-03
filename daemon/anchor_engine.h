@@ -54,6 +54,10 @@ public:
     void restore_all();
     void check_autogroup() const;
 
+    // Path of the TTY resolved during the most recent sweep() (e.g. "/dev/pts/3").
+    // Empty until the first successful TTY discovery; retains the last value if a later discovery fails.
+    const std::string& get_active_tty() const noexcept { return active_pts_path_; }
+
 private:
     long clock_ticks_per_sec_{100};
     std::chrono::steady_clock::time_point last_sweep_time_{};
