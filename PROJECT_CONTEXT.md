@@ -46,6 +46,7 @@ Every 2 seconds it:
 ```
 catra-project/                      (git root; GitHub: varyan03/CATRA)
 ├── PROJECT_CONTEXT.md              this file
+├── FUTURE_PLAN.md                  macOS / Windows porting plan (development + testing)
 ├── README.md                       public-facing docs (no emojis)
 ├── LICENSE                         MIT, "Copyright (c) 2026 varyan03 and CATRA contributors"
 ├── build.sh                        one-shot build → daemon/catra
@@ -386,3 +387,4 @@ Linux (real): `bash build.sh` → model tests → `test_anchor_automated` → `i
 1. Retrain the model with idle/low-activity samples; drop the idle guard.
 2. Validate on a Linux desktop with a physical keyboard and GUI load (cgroup question).
 3. Optional: real window-focus signal (X11/Wayland), multi-tier boosts by confidence, config file, CI.
+4. macOS and Windows ports — full development and testing plan in [`FUTURE_PLAN.md`](FUTURE_PLAN.md).
